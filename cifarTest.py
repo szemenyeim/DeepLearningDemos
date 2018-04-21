@@ -10,8 +10,14 @@ import sys
 
 
 if __name__ == "__main__":
+
+    haveCuda = torch.cuda.is_available()
+
     # Makes multiple runs comparable
-    torch.cuda.manual_seed(1)
+    if haveCuda:
+        torch.cuda.manual_seed(1)
+    else:
+        torch.manual_seed(1)
 
     modelNum = 4
 
@@ -45,7 +51,7 @@ if __name__ == "__main__":
     # Load trained networks
     net = []
     for i in range(modelNum):
-        net.append( densenet.DenseNet169().cuda() )
+        net.append( densenet.DenseNet169().cuda() if haveCuda else densenet.DenseNet169() )
         state_dict = torch.load(root+ ("/model%d.pth" % i)).state_dict()
         net[i].load_state_dict(state_dict)
         net[i].eval()
@@ -68,7 +74,10 @@ if __name__ == "__main__":
         inputs, labels = data
 
         # wrap them in Variable
-        inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
+        if haveCuda:
+            inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
+        else:
+            inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile=True)
 
         # Forward all networks, compute weighted average
         outputs = bestAcc[0]*net[0](inputs)

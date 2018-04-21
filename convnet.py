@@ -10,8 +10,14 @@ import visualize
 import sys
 
 if __name__ == "__main__":
+
+    haveCuda = torch.cuda.is_available()
+
     # Makes multiple runs comparable
-    torch.cuda.manual_seed(1)
+    if haveCuda:
+        torch.cuda.manual_seed(1)
+    else:
+        torch.manual_seed(1)
 
     # path to dataset
     root = 'C:/data/' if sys.platform == 'win32' else './data'
@@ -67,7 +73,9 @@ if __name__ == "__main__":
             return x
 
     # create net
-    net = Net().cuda()
+    net = Net()
+    if haveCuda:
+        net = net.cuda()
 
     # Loss, and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -92,7 +100,10 @@ if __name__ == "__main__":
             inputs, labels = data
 
             # wrap them in Variable
-            inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+            if haveCuda:
+                inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+            else:
+                inputs, labels = Variable(inputs), Variable(labels)
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -137,7 +148,10 @@ if __name__ == "__main__":
             inputs, labels = data
 
             # wrap them in Variable
-            inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
+            if haveCuda:
+                inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
+            else:
+                inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile=True)
 
             # forward
             outputs = net(inputs)
