@@ -16,7 +16,7 @@ myNet = myModel()
 myLoss = nn.CrossEntropyLoss()
 myData = torch.FloatTensor(2,3,3,3)
 
-# ALIAS: cuda esetén cuda tensor lesz, egyébként meg cpu
+# ALIAS: the type will be a cuda tensor if we have GPU, otherwise it will be a CPU tensor
 myLongTensor = torch.cuda.LongTensor if useCuda else torch.LongTensor
 
 result = myLongTensor(2)
