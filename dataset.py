@@ -1,3 +1,4 @@
+import torch
 import os.path as osp
 from torch.utils import data
 import glob
@@ -18,6 +19,9 @@ def alphanum_key(s):
     """
     return [ tryint(c) for c in re.split('([0-9]+)', s) ]
 
+def toLabel(x):
+    return torch.squeeze(x.long())
+
 
 class SSDataSet(data.Dataset):
     def __init__(self, root, split="train", img_transform=None, label_transform=None):
@@ -28,9 +32,10 @@ class SSDataSet(data.Dataset):
         self.img_transform = img_transform
         self.label_transform = label_transform
 
-        data_dir = osp.join(root, split)
-        self.img_dir = osp.join(data_dir,"images")
-        self.lab_dir = osp.join(data_dir,"labels")
+        img_dir = osp.join(root, "images")
+        lab_dir = osp.join(root, "labels")
+        self.img_dir = osp.join(img_dir,split)
+        self.lab_dir = osp.join(lab_dir,split)
 
         for file in sorted(glob.glob1(self.img_dir, "*.png"),key=alphanum_key):
             self.images.append(file)
@@ -61,4 +66,4 @@ class SSDataSet(data.Dataset):
         else:
             labels = label
 
-        return imgs, labels
+        return imgs, toLabel(labels)

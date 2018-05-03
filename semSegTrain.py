@@ -5,7 +5,7 @@ import lr_scheduler
 from model import  CrossEntropyLoss2d, FCN
 from dataset import SSDataSet
 from visualize import LinePlotter
-from torchvision.transforms import Compose, Normalize, ToTensor, RandomHorizontalFlip, Scale
+from torchvision.transforms import Compose, Normalize, ToTensor, RandomHorizontalFlip, Resize
 from PIL import Image
 import sys
 import progressbar
@@ -14,25 +14,25 @@ haveCuda = torch.cuda.is_available()
 
 
 input_transform = Compose([
-    Scale(120,Image.BILINEAR),
+    Resize(128,Image.BILINEAR),
     ToTensor(),
     Normalize([.5, .5, .5], [.5, .5, .5]),
 
 ])
 target_transform = Compose([
-    Scale(120,Image.NEAREST),
+    Resize(128,Image.NEAREST),
     ToTensor(),
 ])
 
 input_transform_tr = Compose([
-    Scale(120, Image.BILINEAR),
+    Resize(128, Image.BILINEAR),
     RandomHorizontalFlip(),
     ToTensor(),
     Normalize([.5, .5, .5], [.5, .5, .5]),
 
 ])
 target_transform_tr = Compose([
-    Scale(120, Image.NEAREST),
+    Resize(128, Image.NEAREST),
     RandomHorizontalFlip(),
     ToTensor(),
 ])
@@ -42,9 +42,9 @@ torch.manual_seed(seed)
 if haveCuda:
     torch.cuda.manual_seed(seed)
 
-batchSize = 32
+batchSize = 2
 
-root = 'C:/data/' if sys.platform == 'win32' else './data'
+root = 'C:/data/' if sys.platform == 'win32' else '/Users/martonszemenyei/Downloads/cityscapes'
 
 trainloader = data.DataLoader(SSDataSet(root, split="train", img_transform=input_transform_tr,
                                          label_transform=target_transform_tr),
@@ -55,7 +55,7 @@ valloader = data.DataLoader(SSDataSet(root, split="val", img_transform=input_tra
                               batch_size=1, shuffle=True)
 
 
-numClass = 5
+numClass = 8
 numPlanes = 32
 levels = 5
 levelDepth = 2
@@ -117,8 +117,7 @@ for epoch in range(epochs):
 
         running_loss += loss.data[0]
         _, predClass = torch.max(pred, 1)
-        print(predClass.size)
-        labSize = predClass.size
+        labSize = predClass.size()
         running_acc += torch.sum( predClass.data == labels.data )*labSize[0]*labSize[1]*100
 
         bSize = images.data.size()[0]
@@ -151,7 +150,7 @@ for epoch in range(epochs):
 
         running_loss += loss.data[0]
         _, predClass = torch.max(pred, 1)
-        labSize = predClass.size
+        labSize = predClass.size()
         running_acc += torch.sum(predClass.data == labels.data)*labSize[0]*labSize[1]*100
 
         bSize = images.data.size()[0]
