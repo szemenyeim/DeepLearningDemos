@@ -56,12 +56,9 @@ for i in range(5):
         # For every minibatch:
         for x_b, y_b in loader:
 
-            # Convert to variable
-            x_var, y_var = Variable(x_b),Variable(y_b)
-
             # Run network and compute loss
-            y_pred = model(x_var)
-            loss = criterion(y_pred,y_var)
+            y_pred = model(x_b)
+            loss = criterion(y_pred,y_b)
 
             # Compute gradients
             optimizer.zero_grad()
@@ -71,7 +68,7 @@ for i in range(5):
             optimizer.step()
 
             # compute error
-            err += loss.data[0]
+            err += loss.item()
         #print err
         plotter.plot("LR=%.2E" % lrs[i], "Error", epoch,err)
 

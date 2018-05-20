@@ -1,7 +1,6 @@
 import torch
 import torchvision
 import torchvision.transforms as transforms
-from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -38,6 +37,8 @@ if __name__ == "__main__":
                              (0.5, 0.5, 0.5))
     ])
 
+    sampler = torch.utils.data.sampler.SubsetRandomSampler(range(10000))
+
     # Datasets
     trainSet = torchvision.datasets.CIFAR10(root=root,
         download=True, train=True, transform=transform)
@@ -45,9 +46,9 @@ if __name__ == "__main__":
         download=True, train=False, transform=transform_val)
 
     #Data loaders
-    trainLoader = torch.utils.data.DataLoader(trainSet,
-        batch_size=128, shuffle=True, num_workers=2)
-    testLoader = torch.utils.data.DataLoader(testSet,
+    trainLoader = torch.utils.data.DataLoader(trainSet, sampler=sampler,
+        batch_size=128, shuffle=False, num_workers=2)
+    testLoader = torch.utils.data.DataLoader(testSet, sampler=sampler,
         batch_size=128, shuffle=False, num_workers=2)
 
     classes = ('plane', 'car', 'bird', 'cat',
@@ -101,9 +102,7 @@ if __name__ == "__main__":
 
             # wrap them in Variable
             if haveCuda:
-                inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
-            else:
-                inputs, labels = Variable(inputs), Variable(labels)
+                inputs, labels = inputs.cuda(), labels.cuda()
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -115,10 +114,10 @@ if __name__ == "__main__":
             optimizer.step()
 
             # compute statistics
-            running_loss += loss.data[0]
-            _, predicted = torch.max(outputs.data, 1)
+            running_loss += loss.item()
+            _, predicted = torch.max(outputs, 1)
             total += labels.size(0)
-            correct += predicted.eq(labels.data).sum()
+            correct += predicted.eq(labels).sum().item()
 
             bar.update(i)
 
@@ -149,19 +148,17 @@ if __name__ == "__main__":
 
             # wrap them in Variable
             if haveCuda:
-                inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
-            else:
-                inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile=True)
+                inputs, labels = inputs.cuda(), labels.cuda()
 
             # forward
             outputs = net(inputs)
             loss = criterion(outputs, labels)
 
             # compute statistics
-            running_loss += loss.data[0]
-            _, predicted = torch.max(outputs.data, 1)
+            running_loss += loss.item()
+            _, predicted = torch.max(outputs, 1)
             total += labels.size(0)
-            correct += predicted.eq(labels.data).sum()
+            correct += predicted.eq(labels).sum().item()
 
             bar.update(i)
 

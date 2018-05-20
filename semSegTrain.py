@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
     haveCuda = torch.cuda.is_available()
 
-    size = 64
+    size = 128
 
 
     input_transform = Compose([
@@ -47,9 +47,9 @@ if __name__ == "__main__":
     if haveCuda:
         torch.cuda.manual_seed(seed)
 
-    batchSize = 32
+    batchSize = 1
 
-    root = 'C:/data/cityscapes/' if sys.platform == 'win32' else '/Users/martonszemenyei/Downloads/cityscapes'
+    root = 'C:/data/cityscapes/' if sys.platform == 'win32' else '~/data/cityscapes'
 
     #sampler = torch.utils.data.sampler.SubsetRandomSampler(range(64))
 
@@ -63,9 +63,9 @@ if __name__ == "__main__":
 
 
     numClass = 8
-    numPlanes = 8
-    levels = 3
-    levelDepth = 1
+    numPlanes = 32
+    levels = 5
+    levelDepth = 2
     kernelSize = 3
 
     model = FCN(numPlanes,levels,levelDepth,numClass,kernelSize,0.1)
@@ -100,34 +100,31 @@ if __name__ == "__main__":
 
     for epoch in range(epochs):
 
-        model.train()
+        model.eval()
         running_loss = 0.0
         running_acc = 0.0
         imgCnt = 0
         bar = progressbar.ProgressBar(0,len(trainloader),redirect_stdout=False)
         for i, (images, labels) in enumerate(trainloader):
             if torch.cuda.is_available():
-                images = Variable(images.cuda())
-                labels = Variable(labels.cuda())
-            else:
-                images = Variable(images)
-                labels = Variable(labels)
+                images = images.cuda()
+                labels = labels.cuda()
 
             optimizer.zero_grad()
 
             pred = model(images)
             loss = criterion(pred,labels)
 
-            loss.backward()
+            #loss.backward()
 
-            optimizer.step()
+            #optimizer.step()
 
-            running_loss += loss.data[0]
+            running_loss += loss.item()
             _, predClass = torch.max(pred, 1)
             labSize = predClass.size()
-            running_acc += torch.sum( predClass.data == labels.data )/(labSize[1]*labSize[2])*100
+            running_acc += torch.sum( predClass == labels ).item()/(labSize[1]*labSize[2])*100
 
-            bSize = images.data.size()[0]
+            bSize = images.size()[0]
             imgCnt += bSize
 
             bar.update(i)
@@ -146,21 +143,18 @@ if __name__ == "__main__":
         bar = progressbar.ProgressBar(0, len(valloader), redirect_stdout=False)
         for i, (images, labels) in enumerate(valloader):
             if torch.cuda.is_available():
-                images = Variable(images.cuda())
-                labels = Variable(labels.cuda())
-            else:
-                images = Variable(images)
-                labels = Variable(labels)
+                images = images.cuda()
+                labels = labels.cuda()
 
             pred = model(images)
             loss = criterion(pred,labels)
 
-            running_loss += loss.data[0]
+            running_loss += loss.item()
             _, predClass = torch.max(pred, 1)
             labSize = predClass.size()
-            running_acc += torch.sum(predClass.data == labels.data)/(labSize[1]*labSize[2])*100
+            running_acc += torch.sum(predClass == labels).item()/(labSize[1]*labSize[2])*100
 
-            bSize = images.data.size()[0]
+            bSize = images.size()[0]
             imgCnt += bSize
 
             maskPred = torch.zeros(numClass,bSize,int(labSize[1]), int(labSize[2])).long()
@@ -170,16 +164,16 @@ if __name__ == "__main__":
                 maskLabel[currClass] = labels.data == currClass
 
             for labIdx in range(numClass):
-                labCnts[labIdx] += torch.sum(maskLabel[labIdx])
+                labCnts[labIdx] += torch.sum(maskLabel[labIdx]).item()
                 for predIdx in range(numClass):
-                    inter = torch.sum(maskPred[predIdx] & maskLabel[labIdx])
+                    inter = torch.sum(maskPred[predIdx] & maskLabel[labIdx]).item()
                     conf[(predIdx, labIdx)] += inter
                     if labIdx == predIdx:
-                        union = torch.sum(maskPred[predIdx] | maskLabel[labIdx])
+                        union = torch.sum(maskPred[predIdx] | maskLabel[labIdx]).item()
                         if union == 0:
                             IoU[labIdx] += 1
                         else:
-                            IoU[labIdx] += float(inter)/(float(union))
+                            IoU[labIdx] += inter/union
 
             bar.update(i)
 
@@ -188,7 +182,7 @@ if __name__ == "__main__":
             for predIdx in range(numClass):
                 conf[(predIdx, labIdx)] /= (labCnts[labIdx] / 100.0)
         meanClassAcc = 0.0
-        meanIoU = torch.sum(IoU/imgCnt) / numClass * 100
+        meanIoU = torch.sum(IoU/imgCnt).item() / numClass * 100
         currLoss = running_loss/(i+1)
         for j in range(numClass):
             meanClassAcc += conf[(j,j)]/numClass
